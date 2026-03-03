@@ -1,69 +1,375 @@
 <!doctype html>
-<html>
+<html lang="pt-BR">
     <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Gerenciador de Tarefas</title>
         <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            }
+
             body {
-                font-family: Arial;
-                max-width: 600px;
-                margin: auto;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
                 padding: 20px;
             }
-            ul {
+
+            .container {
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                width: 100%;
+                max-width: 600px;
+                padding: 30px;
+            }
+
+            h1 {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 30px;
+            }
+
+            .gradient-text {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-size: 2.5em;
+                font-weight: 600;
+            }
+
+            .icon {
+                font-size: 2.5em;
+            }
+
+            .add-task {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 30px;
+            }
+
+            .add-task input {
+                flex: 1;
+                padding: 15px;
+                border: 2px solid #e0e0e0;
+                border-radius: 10px;
+                font-size: 16px;
+                transition: border-color 0.3s;
+            }
+
+            .add-task input:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            .add-task button {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                padding: 0 25px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    transform 0.2s,
+                    box-shadow 0.2s;
+            }
+
+            .add-task button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            }
+
+            .task-list {
                 list-style: none;
-                padding: 0;
             }
-            li {
-                padding: 8px;
-                margin: 5px;
-                background: #f0f0f0;
+
+            .task-item {
+                background: #f8f9fa;
+                border-radius: 10px;
+                padding: 15px;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                transition: all 0.3s;
+                border: 2px solid transparent;
+            }
+
+            .task-item:hover {
+                border-color: #667eea;
+                transform: translateX(5px);
+            }
+
+            .task-item.completed {
+                background: #e8f5e9;
+                opacity: 0.8;
+            }
+
+            .task-item.completed .task-text {
+                text-decoration: line-through;
+                color: #4caf50;
+            }
+
+            .task-checkbox {
+                width: 25px;
+                height: 25px;
+                cursor: pointer;
+                accent-color: #667eea;
+            }
+
+            .task-text {
+                flex: 1;
+                font-size: 16px;
+                color: #333;
+                word-break: break-word;
+            }
+
+            .task-actions {
+                display: flex;
+                gap: 5px;
+            }
+
+            .btn-edit,
+            .btn-delete {
+                background: none;
+                border: none;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 5px;
                 border-radius: 5px;
+                transition: all 0.2s;
             }
-            input,
-            button {
+
+            .btn-edit {
+                color: #667eea;
+            }
+
+            .btn-edit:hover {
+                background: rgba(102, 126, 234, 0.1);
+                transform: scale(1.1);
+            }
+
+            .btn-delete {
+                color: #f44336;
+            }
+
+            .btn-delete:hover {
+                background: rgba(244, 67, 54, 0.1);
+                transform: scale(1.1);
+            }
+
+            .edit-input {
+                flex: 1;
                 padding: 8px;
+                border: 2px solid #667eea;
+                border-radius: 5px;
+                font-size: 16px;
+                margin-right: 10px;
+            }
+
+            .edit-input:focus {
+                outline: none;
+            }
+
+            .empty-message {
+                text-align: center;
+                color: #999;
+                padding: 30px;
+                font-size: 18px;
+            }
+
+            footer {
+                margin-top: 30px;
+                text-align: center;
+                color: #999;
+                font-size: 14px;
             }
         </style>
     </head>
     <body>
-        <h1>Minhas Tarefas</h1>
-        <ul id="task-list"></ul>
-        <input type="text" id="new-task" placeholder="Nova tarefa" />
-        <button onclick="addTask()">Adicionar</button>
+        <div class="container">
+            <h1>
+                <span class="gradient-text">Minhas Tarefas</span>
+                <span class="icon">📋</span>
+            </h1>
+
+            <div class="add-task">
+                <input
+                    type="text"
+                    id="new-task"
+                    placeholder="Digite uma nova tarefa..."
+                />
+                <button onclick="addTask()">Adicionar</button>
+            </div>
+
+            <ul class="task-list" id="task-list">
+                <!-- Tarefas serão inseridas aqui -->
+            </ul>
+
+            <footer>
+                <p>
+                    Clique no checkbox para marcar como concluída | ✏️ Editar |
+                    🗑️ Remover
+                </p>
+            </footer>
+        </div>
 
         <script>
-            function loadTasks() {
-                fetch("/api/tasks")
-                    .then((response) => response.json())
-                    .then((tasks) => {
-                        const list = document.getElementById("task-list");
-                        list.innerHTML = "";
-                        tasks.forEach((task) => {
-                            const li = document.createElement("li");
-                            li.textContent = task.task;
-                            list.appendChild(li);
-                        });
-                    });
+            const API_URL = "/api/tasks";
+
+            async function loadTasks() {
+                try {
+                    const response = await fetch(API_URL);
+                    const tasks = await response.json();
+                    renderTasks(tasks);
+                } catch (error) {
+                    console.error("Erro ao carregar tarefas:", error);
+                }
             }
 
-            function addTask() {
+            function renderTasks(tasks) {
+                const list = document.getElementById("task-list");
+                if (tasks.length === 0) {
+                    list.innerHTML =
+                        '<li class="empty-message">Nenhuma tarefa ainda. Adicione uma!</li>';
+                    return;
+                }
+
+                list.innerHTML = "";
+                tasks.forEach((task) => {
+                    const li = document.createElement("li");
+                    li.className = `task-item ${task.completed ? "completed" : ""}`;
+                    li.dataset.id = task.id;
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.className = "task-checkbox";
+                    checkbox.checked = task.completed === 1;
+                    checkbox.addEventListener("change", () =>
+                        toggleTask(task.id, checkbox.checked),
+                    );
+
+                    const taskText = document.createElement("span");
+                    taskText.className = "task-text";
+                    taskText.textContent = task.task;
+
+                    const actions = document.createElement("div");
+                    actions.className = "task-actions";
+
+                    const editBtn = document.createElement("button");
+                    editBtn.className = "btn-edit";
+                    editBtn.innerHTML = "✏️";
+                    editBtn.title = "Editar";
+                    editBtn.onclick = () => editTask(task.id, task.task);
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.className = "btn-delete";
+                    deleteBtn.innerHTML = "🗑️";
+                    deleteBtn.title = "Remover";
+                    deleteBtn.onclick = () => deleteTask(task.id);
+
+                    actions.appendChild(editBtn);
+                    actions.appendChild(deleteBtn);
+
+                    li.appendChild(checkbox);
+                    li.appendChild(taskText);
+                    li.appendChild(actions);
+                    list.appendChild(li);
+                });
+            }
+
+            async function addTask() {
                 const input = document.getElementById("new-task");
-                const task = input.value;
-                if (!task) return;
+                const taskText = input.value.trim();
+                if (!taskText) return;
 
-                fetch("/api/tasks", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task: task }),
-                })
-                    .then((response) => response.json())
-                    .then(() => {
-                        input.value = "";
-                        loadTasks();
+                try {
+                    await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ task: taskText }),
                     });
+                    input.value = "";
+                    loadTasks();
+                } catch (error) {
+                    console.error("Erro ao adicionar tarefa:", error);
+                }
             }
 
-            loadTasks(); // carrega ao iniciar
+            async function toggleTask(id, completed) {
+                // Primeiro, precisamos obter o texto atual da tarefa
+                try {
+                    const response = await fetch(API_URL);
+                    const tasks = await response.json();
+                    const task = tasks.find((t) => t.id === id);
+                    if (task) {
+                        await fetch(API_URL, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                id: id,
+                                task: task.task,
+                                completed: completed ? 1 : 0,
+                            }),
+                        });
+                        loadTasks();
+                    }
+                } catch (error) {
+                    console.error("Erro ao atualizar tarefa:", error);
+                }
+            }
+
+            async function editTask(id, currentText) {
+                const newText = prompt("Editar tarefa:", currentText);
+                if (newText === null || newText.trim() === "") return;
+
+                try {
+                    // Obter estado atual da tarefa (precisamos do completed)
+                    const response = await fetch(API_URL);
+                    const tasks = await response.json();
+                    const task = tasks.find((t) => t.id === id);
+
+                    await fetch(API_URL, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            id: id,
+                            task: newText.trim(),
+                            completed: task.completed,
+                        }),
+                    });
+                    loadTasks();
+                } catch (error) {
+                    console.error("Erro ao editar tarefa:", error);
+                }
+            }
+
+            async function deleteTask(id) {
+                if (!confirm("Tem certeza que deseja remover esta tarefa?"))
+                    return;
+
+                try {
+                    await fetch(`${API_URL}/${id}`, {
+                        method: "DELETE",
+                    });
+                    loadTasks();
+                } catch (error) {
+                    console.error("Erro ao remover tarefa:", error);
+                }
+            }
+
+            // Carregar tarefas ao iniciar
+            document.addEventListener("DOMContentLoaded", loadTasks);
         </script>
     </body>
 </html>

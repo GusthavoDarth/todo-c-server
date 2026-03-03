@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <fcntl.h>
-#include <ctype.h>
 
 #define PORT 8080
 #define BUFFER_SIZE 4096
@@ -17,12 +16,13 @@
 typedef struct {
     int id;
     char task[256];
+    int completed; // 0 = pendente, 1 = concluída
 } Task;
 
 Task tasks[MAX_TASKS];
 int task_count = 0;
 
-// Protótipos das funções (opcional, mas ajuda na organização)
+// Protótipos das funções
 void init_tasks();
 void save_tasks();
 void load_tasks();
@@ -42,8 +42,12 @@ int next_id() {
 void init_tasks() {
     strcpy(tasks[0].task, "Estudar C");
     tasks[0].id = 1;
+    tasks[0].completed = 0;
+
     strcpy(tasks[1].task, "Fazer projeto");
     tasks[1].id = 2;
+    tasks[1].completed = 0;
+
     task_count = 2;
 }
 
@@ -52,7 +56,8 @@ void save_tasks() {
     if (!f) return;
     fprintf(f, "[");
     for (int i = 0; i < task_count; i++) {
-        fprintf(f, "{\"id\":%d,\"task\":\"%s\"}", tasks[i].id, tasks[i].task);
+        fprintf(f, "{\"id\":%d,\"task\":\"%s\",\"completed\":%d}",
+                tasks[i].id, tasks[i].task, tasks[i].completed);
         if (i < task_count - 1) fprintf(f, ",");
     }
     fprintf(f, "]");
@@ -129,11 +134,12 @@ void handle_client(int client_fd) {
     // Se for uma requisição para a API
     if (strncmp(path, "/api/tasks", 10) == 0) {
         if (strcmp(method, "GET") == 0) {
-            // Construir JSON manualmente (simples)
-            char response_body[2048] = "[";
+            // Listar tarefas (incluindo completed)
+            char response_body[4096] = "[";
             for (int i = 0; i < task_count; i++) {
                 char item[512];
-                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\"}", tasks[i].id, tasks[i].task);
+                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\",\"completed\":%d}",
+                         tasks[i].id, tasks[i].task, tasks[i].completed);
                 strcat(response_body, item);
                 if (i < task_count - 1) strcat(response_body, ",");
             }
@@ -144,19 +150,17 @@ void handle_client(int client_fd) {
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
                 "Content-Length: %ld\r\n"
-                "\r\n",
-                strlen(response_body));
+                "\r\n", strlen(response_body));
 
             send(client_fd, header, header_len, 0);
             send(client_fd, response_body, strlen(response_body), 0);
         }
         else if (strcmp(method, "POST") == 0) {
-            // Ler o corpo da requisição (precisamos do Content-Length)
+            // Adicionar nova tarefa
             char *body_start = strstr(buffer, "\r\n\r\n");
             if (body_start) {
-                body_start += 4; // pula os \r\n\r\n
-
-                // Parse simples do JSON: esperamos {"task":"alguma coisa"}
+                body_start += 4;
+                // Parse simples: {"task":"..."}
                 char *task_ptr = strstr(body_start, "\"task\"");
                 if (task_ptr) {
                     task_ptr = strchr(task_ptr, ':');
@@ -169,26 +173,21 @@ void handle_client(int client_fd) {
                             if (task_count < MAX_TASKS) {
                                 strcpy(tasks[task_count].task, task_ptr);
                                 tasks[task_count].id = next_id();
+                                tasks[task_count].completed = 0;
                                 task_count++;
                                 save_tasks();
-                                char response_body[2048] = "[";
-                                for (int i = 0; i < task_count; i++) {
-                                    char item[512];
-                                    snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\"}", tasks[i].id, tasks[i].task);
-                                    strcat(response_body, item);
-                                    if (i < task_count - 1) strcat(response_body, ",");
-                                }
-                                strcat(response_body, "]");
                             }
                         }
                     }
                 }
             }
-            // Após adicionar, retornar a lista atualizada (mesmo código do GET)
-            char response_body[2048] = "[";
+            // Retornar lista atualizada
+            // (mesmo código do GET para response_body)
+            char response_body[4096] = "[";
             for (int i = 0; i < task_count; i++) {
                 char item[512];
-                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\"}", tasks[i].id, tasks[i].task);
+                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\",\"completed\":%d}",
+                         tasks[i].id, tasks[i].task, tasks[i].completed);
                 strcat(response_body, item);
                 if (i < task_count - 1) strcat(response_body, ",");
             }
@@ -199,8 +198,97 @@ void handle_client(int client_fd) {
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
                 "Content-Length: %ld\r\n"
-                "\r\n",
-                strlen(response_body));
+                "\r\n", strlen(response_body));
+
+            send(client_fd, header, header_len, 0);
+            send(client_fd, response_body, strlen(response_body), 0);
+        }
+        else if (strcmp(method, "PUT") == 0) {
+            // Editar tarefa (ou marcar como concluída)
+            char *body_start = strstr(buffer, "\r\n\r\n");
+            if (body_start) {
+                body_start += 4;
+                int id;
+                char new_task[256];
+                int completed;
+                // Exemplo: {"id":1,"task":"Estudar C++","completed":1}
+                if (sscanf(body_start, "{\"id\":%d,\"task\":\"%[^\"]\",\"completed\":%d}",
+                           &id, new_task, &completed) == 3) {
+                    for (int i = 0; i < task_count; i++) {
+                        if (tasks[i].id == id) {
+                            strcpy(tasks[i].task, new_task);
+                            tasks[i].completed = completed;
+                            break;
+                        }
+                    }
+                    save_tasks();
+                }
+            }
+            // Retornar lista atualizada (mesmo código do GET)
+            char response_body[4096] = "[";
+            for (int i = 0; i < task_count; i++) {
+                char item[512];
+                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\",\"completed\":%d}",
+                         tasks[i].id, tasks[i].task, tasks[i].completed);
+                strcat(response_body, item);
+                if (i < task_count - 1) strcat(response_body, ",");
+            }
+            strcat(response_body, "]");
+
+            char header[256];
+            int header_len = snprintf(header, sizeof(header),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Content-Length: %ld\r\n"
+                "\r\n", strlen(response_body));
+
+            send(client_fd, header, header_len, 0);
+            send(client_fd, response_body, strlen(response_body), 0);
+        }
+        else if (strcmp(method, "DELETE") == 0) {
+            // Extrair ID da URL (ex: /api/tasks/3)
+            int id = 0;
+            char *id_start = strstr(path, "/api/tasks/");
+            if (id_start) {
+                id_start += 11; // tamanho de "/api/tasks/"
+                id = atoi(id_start);
+            }
+
+            // Remover tarefa com esse ID
+            int found = 0;
+            for (int i = 0; i < task_count; i++) {
+                if (tasks[i].id == id) {
+                    found = 1;
+                    // Deslocar tarefas restantes
+                    for (int j = i; j < task_count - 1; j++) {
+                        tasks[j] = tasks[j + 1];
+                    }
+                    task_count--;
+                    break;
+                }
+            }
+
+            if (found) {
+                save_tasks();
+            }
+
+            // Retornar lista atualizada (mesmo código do GET)
+            char response_body[4096] = "[";
+            for (int i = 0; i < task_count; i++) {
+                char item[512];
+                snprintf(item, sizeof(item), "{\"id\":%d,\"task\":\"%s\",\"completed\":%d}",
+                         tasks[i].id, tasks[i].task, tasks[i].completed);
+                strcat(response_body, item);
+                if (i < task_count - 1) strcat(response_body, ",");
+            }
+            strcat(response_body, "]");
+
+            char header[256];
+            int header_len = snprintf(header, sizeof(header),
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: application/json\r\n"
+                "Content-Length: %ld\r\n"
+                "\r\n", strlen(response_body));
 
             send(client_fd, header, header_len, 0);
             send(client_fd, response_body, strlen(response_body), 0);
