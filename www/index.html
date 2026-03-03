@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Gerenciador de Tarefas</title>
+        <style>
+            body {
+                font-family: Arial;
+                max-width: 600px;
+                margin: auto;
+                padding: 20px;
+            }
+            ul {
+                list-style: none;
+                padding: 0;
+            }
+            li {
+                padding: 8px;
+                margin: 5px;
+                background: #f0f0f0;
+                border-radius: 5px;
+            }
+            input,
+            button {
+                padding: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Minhas Tarefas</h1>
+        <ul id="task-list"></ul>
+        <input type="text" id="new-task" placeholder="Nova tarefa" />
+        <button onclick="addTask()">Adicionar</button>
+
+        <script>
+            function loadTasks() {
+                fetch("/api/tasks")
+                    .then((response) => response.json())
+                    .then((tasks) => {
+                        const list = document.getElementById("task-list");
+                        list.innerHTML = "";
+                        tasks.forEach((task) => {
+                            const li = document.createElement("li");
+                            li.textContent = task.task;
+                            list.appendChild(li);
+                        });
+                    });
+            }
+
+            function addTask() {
+                const input = document.getElementById("new-task");
+                const task = input.value;
+                if (!task) return;
+
+                fetch("/api/tasks", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task: task }),
+                })
+                    .then((response) => response.json())
+                    .then(() => {
+                        input.value = "";
+                        loadTasks();
+                    });
+            }
+
+            loadTasks(); // carrega ao iniciar
+        </script>
+    </body>
+</html>
